@@ -6,7 +6,9 @@ const app = express()
 const port = 3000
 const http = require("http");
 const server = http.createServer(app)
-const wss = new WebSocketServer({ server })
+// const wss = new WebSocketServer({ server })
+const { Server } = require("socket.io");
+const io = new Server(server);
 
 app.set("view engine", "pug")
 app.set("views", __dirname + "/views")
@@ -17,26 +19,43 @@ app.get('/', (req, res) => {
     res.render('home')
 })
 
-
-const sockets = []
-wss.on("connection", (socket) => {
-    sockets.push(socket)
+io.on('connection', socket => {
     socket['nickname'] = "Anon"
-    console.log('Server is Open ✅')
-    socket.on('message', (msg) => {
-        const parseMsg = JSON.parse(msg)
-        switch (parseMsg.type) {
-            case "message":
-                sockets.forEach((a) => { a.send(`${socket.nickname}: ${parseMsg.payload.toString()}`) })
-            case "nickname":
-                socket['nickname'] = parseMsg.payload
-        }
-
+    socket.on('enter_room', (roomName, done) => {
+        socket.join(roomName)
+        done()
+        socket.to(roomName).emit("welcome", socket.nickname)
     })
-    socket.on('close', () => {
-        console.log('Server is Close ❌')
+    socket.on('disconnecting', () => {
+        socket.rooms.forEach(room => {
+            socket.to(room).emit('bye', socket.nickname)
+        })
     })
+    socket.on('newMsg', (msg, room, done) => {
+        socket.to(room).emit('sendMsg', `${socket.nickname}: ${msg}`)
+        done()
+    })
+    socket.on('nickname', (nickname) => socket['nickname'] = nickname)
 })
+// const sockets = []
+// wss.on("connection", (socket) => {
+//     sockets.push(socket)
+//     socket['nickname'] = "Anon"
+//     console.log('Server is Open ✅')
+//     socket.on('message', (msg) => {
+//         const parseMsg = JSON.parse(msg)
+//         switch (parseMsg.type) {
+//             case "message":
+//                 sockets.forEach((a) => { a.send(`${socket.nickname}: ${parseMsg.payload.toString()}`) })
+//             case "nickname":
+//                 socket['nickname'] = parseMsg.payload
+//         }
+
+//     })
+//     socket.on('close', () => {
+//         console.log('Server is Close ❌')
+//     })
+// })
 
 server.listen(port, () => {
     console.log(`${port}에 서버 시작`)

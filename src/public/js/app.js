@@ -1,38 +1,60 @@
-const msgForm = document.querySelector('#msg')
-const nickForm = document.querySelector('#nick')
-const msgList = document.querySelector('ul')
-const socket = new WebSocket(`ws://${window.location.host}`)
+const socket = io();
+const welcome = document.querySelector('#welcome')
+const roonNameform = welcome.querySelector('#room-name')
+const nickForm = welcome.querySelector('#nick')
+const room = document.querySelector('#room')
 
-function makeJson(type, payload) {
-    const data = {
-        type: type,
-        payload: payload
-    }
-    return JSON.stringify(data)
+
+let roomName = ''
+
+room.hidden = true;
+
+function msgSubmit(e) {
+    e.preventDefault()
+    const input = room.querySelector('#msg input')
+    socket.emit('newMsg', input.value, roomName, () => {
+        printMsg(`You: ${input.value}`)
+        input.value = ''
+    })
 }
 
-socket.addEventListener('open', () => {
-    console.log('Server is Open ✅')
-})
+function showRoom() {
+    const h3 = room.querySelector('h3')
+    welcome.hidden = true;
+    room.hidden = false
+    h3.innerText = `Room: ${roomName}`
+    const msgForm = room.querySelector('#msg')
+    msgForm.addEventListener('submit', msgSubmit)
+}
 
-socket.addEventListener('message', (message) => {
+function printMsg(msg) {
+    const ul = room.querySelector('ul')
     const li = document.createElement('li')
-    li.innerText = message.data
-    msgList.append(li)
-})
+    li.innerText = msg
+    ul.append(li)
+}
 
-socket.addEventListener('close', () => {
-    console.log('Server is Close ❌')
-})
-
-msgForm.addEventListener('submit', (e) => {
+roonNameform.addEventListener('submit', (e) => {
     e.preventDefault()
-    const input = msgForm.querySelector('input')
-    socket.send(makeJson('message', input.value))
+    const input = roonNameform.querySelector('input')
+    socket.emit('enter_room', input.value, showRoom)
+    roomName = input.value
     input.value = ''
 })
 nickForm.addEventListener('submit', (e) => {
     e.preventDefault()
     const input = nickForm.querySelector('input')
-    socket.send(makeJson('nickname', input.value))
+    socket.emit('nickname', input.value)
+})
+
+socket.on('welcome', (user) => {
+    printMsg(`${user} Join! 🎉`)
+})
+
+socket.on('bye', (user) => {
+    printMsg(`${user} Left! 👋`)
+})
+
+socket.on('sendMsg', (msg) => {
+    printMsg(msg)
 })

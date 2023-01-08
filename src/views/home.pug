@@ -11,12 +11,18 @@ html(lang="en")
             h1 JOOM 
         main
             h2 welcome to JOOM
-            form#nick
-                input(type="text")
-                button Submit
-            ul 
-            form#msg
-                input(type="text")
-                button Submit
-
+            #welcome 
+                form#room-name
+                    input(type="text" placeholder="room name")
+                    button Enter
+                form#nick
+                    input(type="text" placeholder = "Nickname")
+                    button Save
+            #room
+                h3
+                ul
+                form#msg
+                    input(type="text" placeholder = "Send Message")
+                    button Send
+        script(src="/socket.io/socket.io.js")
         script(src="/public/js/app.js") 
