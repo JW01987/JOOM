@@ -19,17 +19,37 @@ app.get('/', (req, res) => {
     res.render('home')
 })
 
+function publicRooms() {
+    const { sockets: { adapter: { sids, rooms } } } = io
+    const publicRoom = [];
+
+    rooms.forEach((_, key) => {
+        if (sids.get(key) === undefined) {
+            publicRoom.push(key)
+        }
+
+    })
+    return publicRoom
+}
+
+function countRoom(roomName) {
+    return io.sockets.adapter.rooms.get(roomName)?.size
+}
 io.on('connection', socket => {
     socket['nickname'] = "Anon"
     socket.on('enter_room', (roomName, done) => {
         socket.join(roomName)
         done()
-        socket.to(roomName).emit("welcome", socket.nickname)
+        socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName))
+        io.sockets.emit('room_change', publicRooms())
     })
     socket.on('disconnecting', () => {
         socket.rooms.forEach(room => {
-            socket.to(room).emit('bye', socket.nickname)
+            socket.to(room).emit('bye', socket.nickname, countRoom(room) - 1)
         })
+    })
+    socket.on('disconnect', () => {
+        io.sockets.emit('room_change', publicRooms())
     })
     socket.on('newMsg', (msg, room, done) => {
         socket.to(room).emit('sendMsg', `${socket.nickname}: ${msg}`)
@@ -37,25 +57,7 @@ io.on('connection', socket => {
     })
     socket.on('nickname', (nickname) => socket['nickname'] = nickname)
 })
-// const sockets = []
-// wss.on("connection", (socket) => {
-//     sockets.push(socket)
-//     socket['nickname'] = "Anon"
-//     console.log('Server is Open ✅')
-//     socket.on('message', (msg) => {
-//         const parseMsg = JSON.parse(msg)
-//         switch (parseMsg.type) {
-//             case "message":
-//                 sockets.forEach((a) => { a.send(`${socket.nickname}: ${parseMsg.payload.toString()}`) })
-//             case "nickname":
-//                 socket['nickname'] = parseMsg.payload
-//         }
 
-//     })
-//     socket.on('close', () => {
-//         console.log('Server is Close ❌')
-//     })
-// })
 
 server.listen(port, () => {
     console.log(`${port}에 서버 시작`)

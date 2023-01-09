@@ -47,14 +47,32 @@ nickForm.addEventListener('submit', (e) => {
     socket.emit('nickname', input.value)
 })
 
-socket.on('welcome', (user) => {
+socket.on('welcome', (user, countRomm) => {
     printMsg(`${user} Join! 🎉`)
+    const h3 = room.querySelector('h3')
+    h3.innerText = `Room: ${roomName} (${countRomm})`
 })
 
-socket.on('bye', (user) => {
+socket.on('bye', (user, countRomm) => {
     printMsg(`${user} Left! 👋`)
+    const h3 = room.querySelector('h3')
+    h3.innerText = `Room: ${roomName} (${countRomm})`
 })
 
 socket.on('sendMsg', (msg) => {
     printMsg(msg)
+})
+
+socket.on('room_change', (rooms) => {
+    const roomList = welcome.querySelector('ul')
+    roomList.innerHTML = ''
+    if (rooms.lenght === 0) {
+        return
+    }
+    rooms.forEach((room) => {
+        const li = document.createElement('li')
+        li.innerText = room
+        roomList.append(li)
+    })
+
 })
